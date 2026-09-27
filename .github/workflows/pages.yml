@@ -34,6 +34,7 @@ jobs:
           if grep -q '__BUILD_ID__' index.html; then echo "build id was not stamped"; exit 1; fi
           cp app.js /tmp/app.mjs && node --check /tmp/app.mjs
           echo "module-mode syntax OK"
+          node check-ids.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

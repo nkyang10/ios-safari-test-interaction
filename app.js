@@ -102,8 +102,18 @@ function kvTable(parent, obj) {
 }
 function stat(parent, label, value) { return table(parent, [label], [[String(value)]]); }
 
-function verdict(outSel, kind, text) {
-  const v = $('#' + outSel);
+function verdict(target, kind, text) {
+  let v = null;
+  if (typeof target === 'string') v = $('#' + target) || $(`[data-verdict="${target}"]`);
+  else v = target;
+  if (!v) {
+    // never let a missing target kill a benchmark run
+    v = document.createElement('div');
+    v.className = 'verdict';
+    const host = ($('.panel.active .out') || $('#report-out'));
+    if (host) host.appendChild(v);
+    console.warn('verdict: target not found, using a temporary node →', target);
+  }
   v.innerHTML = '';
   v.appendChild(badge(kind));
   v.appendChild(document.createTextNode(' ' + text));
@@ -281,7 +291,10 @@ async function runCaps() {
   push('Presentation API (2nd screen)', 'Presentation' in window, 'NOT in Safari', 'Presentation' in window ? 'warn' : 'na');
   push('Pointer lock', 'requestPointerLock' in Element.prototype, 'NOT in iOS', 'requestPointerLock' in Element.prototype ? 'warn' : 'na');
   push('Vibration API', 'vibrate' in navigator, 'NOT in iOS', 'vibrate' in navigator ? 'warn' : 'na');
-  push('Haptics (Gamepad actuators)', 'hapticActuators' in (navigator.getGamepads?.() || [{}])[0] ? 'maybe' : 'no', 'not in iOS', 'na');
+  // navigator.getGamepads() returns null holes, so never index it unguarded
+  const gps = navigator.getGamepads ? Array.from(navigator.getGamepads() || []).filter(Boolean) : [];
+  push('Gamepads connected', gps.length ? gps.map((g) => g.id).join(' / ') : 'none', 'optional', 'info');
+  push('Gamepad haptics', gps.some((g) => g.hapticActuators && g.hapticActuators.length) ? 'yes' : 'no', 'NOT in iOS', 'na');
   push('WebXR', 'xr' in navigator, 'visionOS only', 'xr' in navigator ? 'warn' : 'na');
   push('Navigator.gpu.requestAdapter', 'gpu' in navigator ? typeof navigator.gpu.requestAdapter : 'n/a', 'function', 'gpu' in navigator ? 'ok' : 'bad');
   push('MediaRecorder + webm', typeof MediaRecorder !== 'undefined', 'true', typeof MediaRecorder !== 'undefined' ? 'ok' : 'bad');
@@ -719,7 +732,7 @@ async function runWebGL() {
     unmaskedVendor: dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : 'n/a',
     maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
     maxTextureImageUnits: gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS),
-    maxComputeWorkGroupSize: gl.getParameter(gl.MAX_COMPUTE_WORK_GROUP_SIZE_X) ?? 'n/a',
+    maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
     colorBufferFloat: !!gl.getExtension('EXT_color_buffer_float'),
     floatBlend: !!gl.getExtension('EXT_float_blend'),
     textureFloatLinear: !!gl.getExtension('OES_texture_float_linear'),
@@ -1313,8 +1326,26 @@ $('#btn-caps').addEventListener('click', runCaps);
 $('#btn-all').addEventListener('click', async () => {
   const b = $('#btn-all');
   b.disabled = true; b.textContent = 'running…';
+  const steps = [
+    ['environment', runEnv], ['capabilities', runCaps], ['wasm', runWasm],
+    ['webgl', runWebGL], ['webgpu', runWebGPU],
+  ];
+  const failed = [];
   try {
-    await runEnv(); await runCaps(); await runWasm(); await runWebGL(); await runWebGPU();
+    for (const [name, fn] of steps) {
+      try { await fn(); }
+      catch (e) {
+        failed.push(name + ': ' + (e && e.message ? e.message : e));
+        const box = document.createElement('div');
+        box.className = 'out';
+        box.style.borderColor = '#ef5f6b';
+        box.textContent = `step "${name}" threw: ${e && e.stack ? e.stack : e}`;
+        document.querySelector('.panel.active').appendChild(box);
+      }
+    }
+    if (failed.length) {
+      window.__iosbtFatal && window.__iosbtFatal('Some steps threw: ' + failed.join(' | '));
+    }
     $$('#tabs button').forEach((x) => x.classList.remove('active'));
     $$('.panel').forEach((p) => p.classList.remove('active'));
     $('#report').classList.add('active');

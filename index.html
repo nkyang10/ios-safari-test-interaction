@@ -160,7 +160,7 @@
     <label>Duration <input id="mp-secs" type="number" value="10" min="2" max="120" size="4"> s</label>
     <button id="btn-mp" class="primary">Start camera + run ML benchmark</button>
     <button id="btn-mp-stop" disabled>Stop</button>
-    <span id="mp-verdict" class="verdict"></span>
+    <span id="ml-verdict" data-verdict="ml-verdict" class="verdict"></span>
   </div>
   <p class="warn" id="ml-warning"></p>
   <div class="vidwrap">
@@ -245,6 +245,11 @@
       '<br>If the message names a duplicate/stale identifier, your cache is holding an old app.js: ' +
       'hard reload, or delete the Home Screen icon and reopen the site.');
   }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    fatal('Unhandled promise rejection: ' + String((r && r.stack) || r).replace(/</g, '&lt;') +
+      '<br>build requested: ' + window.__iosbtBuild);
+  });
   setTimeout(function () {
     if (!window.__iosbtBooted) {
       fatal('The module never finished booting (build ' + window.__iosbtBuild + '). ' +
