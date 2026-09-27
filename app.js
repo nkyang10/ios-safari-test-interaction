@@ -6,6 +6,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
 const now = () => performance.now();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v, d = 1) => (v === null || v === undefined || Number.isNaN(v) ? '—' : Number(v).toFixed(d));
+const BUILD = (document.querySelector('meta[name=build]') || {}).content || 'dev';
 
 // ---------------------------------------------------------------- report store
 const R = {
@@ -142,6 +143,7 @@ async function runEnv() {
   const u = uaInfo();
   R.meta = {
     startedAt: new Date().toISOString(),
+    build: BUILD,
     ...u,
     iOSversionManual: $('#iosver').value || null,
     deviceModelManual: $('#devmodel').value || null,
@@ -1358,6 +1360,9 @@ $('#auto-store').addEventListener('change', stashReport);
 
 attachMotionUI();
 (function boot() {
+  const b = document.getElementById('build');
+  if (b) b.textContent = 'build ' + BUILD;
+  window.__iosbtBooted = true;
   const stage = getStage();
   if (stage) {
     const bar = $('#crashbar');

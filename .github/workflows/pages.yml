@@ -23,6 +23,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Stamp build id into the page
+        run: |
+          ID="${{ github.sha }}"-"$(date -u +%Y%m%d-%H%M%S)"
+          sed -i "s/__BUILD_ID__/$ID/g" index.html
+          echo "build id: $ID"
+      - name: Sanity check the stamped build
+        run: |
+          grep -q 'app.js?v=' index.html
+          if grep -q '__BUILD_ID__' index.html; then echo "build id was not stamped"; exit 1; fi
+          cp app.js /tmp/app.mjs && node --check /tmp/app.mjs
+          echo "module-mode syntax OK"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

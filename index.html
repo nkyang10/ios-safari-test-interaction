@@ -6,8 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#11131a">
+<meta name="build" content="__BUILD_ID__">
 <title>iOS Safari 27.x — Motion / Object Detection Capability Test Harness</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=__BUILD_ID__">
 </head>
 <body>
 <header>
@@ -215,8 +216,43 @@
 
 <footer>
   <span id="stamp"></span> — static page, no telemetry. Everything runs on-device.
+  <span id="build"></span>
 </footer>
 
-<script type="module" src="app.js"></script>
+<script>
+// Classic script: runs even if the module below fails to parse, so a stale
+// cached app.js shows an explicit banner instead of a silently dead page.
+(function () {
+  var meta = document.querySelector('meta[name=build]');
+  window.__iosbtBuild = (meta && meta.content) || 'dev';
+  function fatal(html) {
+    var d = document.getElementById('fatal');
+    if (!d) {
+      d = document.createElement('div');
+      d.id = 'fatal';
+      (document.body || document.documentElement).appendChild(d);
+    }
+    d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99;background:#3a1d22;color:#ffd9dd;' +
+      'border-bottom:2px solid #ef5f6b;padding:10px 12px;font:13px/1.45 -apple-system,BlinkMacSystemFont,sans-serif';
+    d.innerHTML = '<b>app.js did not start.</b><br>' + html;
+  }
+  window.__iosbtFatal = fatal;
+  window.addEventListener('error', function (e) {
+    var m = (e && e.message) || '';
+    if (!m) return;
+    fatal('JavaScript error: ' + m.replace(/</g, '&lt;') +
+      '<br>build requested: ' + window.__iosbtBuild +
+      '<br>If the message names a duplicate/stale identifier, your cache is holding an old app.js: ' +
+      'hard reload, or delete the Home Screen icon and reopen the site.');
+  }, true);
+  setTimeout(function () {
+    if (!window.__iosbtBooted) {
+      fatal('The module never finished booting (build ' + window.__iosbtBuild + '). ' +
+        'Almost certainly a cached app.js. Hard reload, or delete the Home Screen icon, then reopen.');
+    }
+  }, 4000);
+})();
+</script>
+<script type="module" src="app.js?v=__BUILD_ID__"></script>
 </body>
 </html>
