@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#11131a">
+<title>iOS Safari 27.x — Motion / Object Detection Capability Test Harness</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>iOS Safari 27.x — Interaction &amp; ML Capability Harness</h1>
+  <div class="sub">Motion, camera, WASM, WebGL2, WebGPU, MediaPipe benchmarks + landmine probes</div>
+  <div class="warnbar" id="crashbar" hidden></div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="env" class="active">1. Environment</button>
+  <button data-tab="caps">2. Capabilities</button>
+  <button data-tab="motion">3. Motion</button>
+  <button data-tab="camera">4. Camera</button>
+  <button data-tab="wasm">5. WASM</button>
+  <button data-tab="webgl">6. WebGL2</button>
+  <button data-tab="webgpu">7. WebGPU</button>
+  <button data-tab="ml">8. MediaPipe ML</button>
+  <button data-tab="stress">9. Landmine probes</button>
+  <button data-tab="report">10. Report</button>
+</nav>
+
+<main>
+
+<!-- 1. ENVIRONMENT -->
+<section id="env" class="panel active">
+  <div class="row">
+    <button id="btn-env" class="primary">Run environment scan</button>
+    <button id="btn-all" class="primary">Run ALL safe checks (1-7)</button>
+    <span class="hint">Everything except the "Landmine probes" tab is safe to auto-run.</span>
+  </div>
+  <div class="row">
+    <label>iOS version (manual — UA no longer reports it on iOS 26+):
+      <input id="iosver" type="text" placeholder="e.g. 27.0" size="8">
+    </label>
+    <label>Device model (manual):
+      <input id="devmodel" type="text" placeholder="e.g. iPhone 14 Pro" size="16">
+    </label>
+  </div>
+  <div id="env-out" class="out"></div>
+</section>
+
+<!-- 2. CAPABILITIES -->
+<section id="caps" class="panel">
+  <p class="hint">Expected values are the researched targets for iOS Safari 27.x. <span class="ok">OK</span> = matches target, <span class="warn">WARN</span> = degraded, <span class="bad">BAD</span> = breaks the plan, <span class="na">N/A</span> = known-missing by design.</p>
+  <div class="row"><button id="btn-caps" class="primary">Run capability matrix</button></div>
+  <div id="caps-out" class="out"></div>
+</section>
+
+<!-- 3. MOTION -->
+<section id="motion" class="panel">
+  <div class="row">
+    <button id="btn-motion-perm" class="primary">Request motion permission</button>
+    <button id="btn-motion-run" class="primary" disabled>Start 10 s motion capture</button>
+    <button id="btn-motion-cal" disabled>Zero tilt (calibrate)</button>
+    <button id="btn-motion-demo" disabled>Toggle tilt-pad demo</button>
+  </div>
+  <p class="hint">iOS requires HTTPS + a user gesture. Events are expected at ~60 Hz. Shake = |accelerationIncludingGravity - gravity| above threshold.</p>
+  <div id="motion-out" class="out"></div>
+  <div id="mlive" class="out" style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">waiting for devicemotion…</div>
+  <div class="padwrap"><div id="tiltpad"><div id="tiltball"></div></div><div class="hint">Tilt-pad: gravity direction mapped to ball position (latency eyeball test)</div></div>
+</section>
+
+<!-- 4. CAMERA -->
+<section id="camera" class="panel">
+  <div class="row">
+    <label>Constraints
+      <select id="cam-facemode">
+        <option value="user">user</option>
+        <option value="environment">environment</option>
+      </select>
+      <select id="cam-res">
+        <option value="640x480">640x480</option>
+        <option value="1280x720" selected>1280x720</option>
+        <option value="1920x1080">1920x1080</option>
+        <option value="any">any</option>
+      </select>
+      <select id="cam-fps">
+        <option value="30" selected>30</option>
+        <option value="60">60</option>
+        <option value="any">any</option>
+      </select>
+    </label>
+    <button id="btn-cam" class="primary">Start camera</button>
+    <button id="btn-cam-stop" disabled>Stop</button>
+  </div>
+  <div class="row">
+    <button id="btn-cam-fps" disabled>Measure frame delivery (2 s)</button>
+    <button id="btn-cam-mstp" disabled>MediaStreamTrackProcessor pump (2 s)</button>
+    <button id="btn-cam-grab" disabled>ImageCapture.grabFrame</button>
+    <label><input id="cam-log" type="checkbox" checked> draw video to canvas</label>
+  </div>
+  <div class="vidwrap">
+    <video id="cam" playsinline muted autoplay></video>
+    <canvas id="camcanvas" width="320" height="240"></canvas>
+  </div>
+  <div id="camera-out" class="out"></div>
+</section>
+
+<!-- 5. WASM -->
+<section id="wasm" class="panel">
+  <div class="row"><button id="btn-wasm" class="primary">Run WASM checks</button></div>
+  <p class="hint">Threads require cross-origin isolation (COOP+COEP). GitHub Pages cannot set those headers — use <code>node server.mjs</code> to test threads locally.</p>
+  <div id="wasm-out" class="out"></div>
+</section>
+
+<!-- 6. WEBGL2 -->
+<section id="webgl" class="panel">
+  <div class="row"><button id="btn-webgl" class="primary">Run WebGL2 checks</button></div>
+  <div class="vidwrap"><canvas id="glcanvas" width="240" height="180"></canvas></div>
+  <div id="webgl-out" class="out"></div>
+</section>
+
+<!-- 7. WEBGPU -->
+<section id="webgpu" class="panel">
+  <div class="row">
+    <button id="btn-webgpu" class="primary">Run WebGPU checks (safe)</button>
+    <button id="btn-webgpu-compute" disabled>Compute smoke test (small)</button>
+  </div>
+  <p class="hint">Safari 26+ ships WebGPU. The <code>adapterInfo</code> check is the gate: without it, most ML runtimes (onnxruntime-web) refuse to start.</p>
+  <div id="webgpu-out" class="out"></div>
+</section>
+
+<!-- 8. MEDIAPIPE ML -->
+<section id="ml" class="panel">
+  <div class="row">
+    <label>tasks-vision
+      <select id="mp-ver">
+        <option value="1.0.1" selected>1.0.1</option>
+        <option value="0.10.22">0.10.22</option>
+        <option value="0.10.21">0.10.21</option>
+      </select>
+    </label>
+    <label>Task
+      <select id="mp-task">
+        <option value="hand">HandLandmarker</option>
+        <option value="gesture">GestureRecognizer</option>
+        <option value="object">ObjectDetector</option>
+        <option value="face">FaceDetector</option>
+      </select>
+    </label>
+    <label>Delegate
+      <select id="mp-delegate">
+        <option value="CPU">CPU (safe)</option>
+        <option value="GPU">GPU (known iOS risk)</option>
+      </select>
+    </label>
+  </div>
+  <div class="row">
+    <label>Duration <input id="mp-secs" type="number" value="10" min="2" max="120" size="4"> s</label>
+    <button id="btn-mp" class="primary">Start camera + run ML benchmark</button>
+    <button id="btn-mp-stop" disabled>Stop</button>
+    <span id="mp-verdict" class="verdict"></span>
+  </div>
+  <p class="warn" id="ml-warning"></p>
+  <div class="vidwrap">
+    <video id="mlvid" playsinline muted autoplay></video>
+    <canvas id="mlcanvas" width="320" height="240"></canvas>
+  </div>
+  <div id="ml-out" class="out"></div>
+</section>
+
+<!-- 9. LANDMINE PROBES -->
+<section id="stress" class="panel">
+  <p class="warn">These probes intentionally stress the failures documented for iOS Safari 26.2+/27.x. They may hang, reload the page, or kill the WebContent process (that is the point). Run one at a time; do not run on a device you cannot afford to reload.</p>
+  <div class="row">
+    <label>WASM big-function body
+      <select id="probe-size">
+        <option value="262144">256 KB</option>
+        <option value="1048576" selected>1 MB</option>
+        <option value="4194304">4 MB</option>
+        <option value="8388608">8 MB</option>
+      </select>
+    </label>
+    <label>Repeats <input id="probe-reps" type="number" value="1" min="1" max="20" size="3"></label>
+    <label>Calls each <input id="probe-calls" type="number" value="2000" min="1" max="100000" size="5"></label>
+    <button id="btn-probe-wasm" class="danger">Probe: big WASM function (WebKit 304810)</button>
+  </div>
+  <div class="row">
+    <button id="btn-probe-tex" class="danger">Probe: 2x2 WebGPU texture (PlayCanvas crash report)</button>
+    <button id="btn-probe-mem" class="danger">Probe: large GPU buffer (maxBufferSize pressure)</button>
+    <button id="btn-probe-thermal" class="danger">Probe: 60 s thermal / throttling soak</button>
+  </div>
+  <div class="row">
+    <label>Seconds <input id="probe-soak" type="number" value="60" min="10" max="600" size="4"></label>
+    <span class="hint">Soak runs camera + rAF + long-task monitor and reports FPS decay.</span>
+  </div>
+  <div id="stress-out" class="out"></div>
+</section>
+
+<!-- 10. REPORT -->
+<section id="report" class="panel">
+  <div class="row">
+    <button id="btn-export" class="primary">Download JSON report</button>
+    <button id="btn-copy" class="primary">Copy JSON to clipboard</button>
+    <button id="btn-clear" class="danger">Clear stored report</button>
+  </div>
+  <div class="row">
+    <label><input id="auto-store" type="checkbox" checked> keep last report in localStorage for crash forensics</label>
+  </div>
+  <div id="report-out" class="out"></div>
+  <pre id="report-json" class="json"></pre>
+</section>
+
+</main>
+
+<footer>
+  <span id="stamp"></span> — static page, no telemetry. Everything runs on-device.
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
