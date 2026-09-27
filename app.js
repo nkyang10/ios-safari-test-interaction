@@ -423,32 +423,6 @@ function attachMotionUI() {
     if (line) {
       line.textContent = `a(${fmt(a.x, 2)}, ${fmt(a.y, 2)}, ${fmt(a.z, 2)})  g(${fmt(g.x, 1)}, ${fmt(g.y, 1)}, ${fmt(g.z, 1)})  rot(${fmt(rr.alpha, 1)}, ${fmt(rr.beta, 1)}, ${fmt(rr.gamma, 1)})  ${M.events} ev`;
     }
-    // shake: jerk magnitude of g
-    if (M.prevG) {
-      const d = Math.hypot(g.x - M.prevG.x, g.y - M.prevG.y, g.z - M.prevG.z);
-      M.peakJerk = Math.max(M.peakJerk || 0, d);
-      if (d > 18) { M.shakeCount = (M.shakeCount || 0) + 1; M.lastJerk = d; }
-    }
-    M.prevG = { x: g.x, y: g.y, z: g.z };
-
-    if (M.demo) {
-      const beta = (M.lastBeta || 0) - (M.zero?.beta || 0);
-      const gamma = (M.lastGamma || 0) - (M.zero?.gamma || 0);
-      const ball = $('#tiltball');
-      ball.style.transform = `translate(${Math.max(-70, Math.min(70, gamma * 1.2))}px, ${Math.max(-70, Math.min(70, beta * 1.2))}px)`;
-    }
-  };
-}
-
-function attachMotionUI() {
-  onMotionData.ui = (e) => {
-    const g = e.accelerationIncludingGravity || {};
-    const a = e.acceleration || {};
-    const rr = e.rotationRate || {};
-    const line = document.getElementById('mlive');
-    if (line) {
-      line.textContent = `a(${fmt(a.x, 2)}, ${fmt(a.y, 2)}, ${fmt(a.z, 2)})  g(${fmt(g.x, 1)}, ${fmt(g.y, 1)}, ${fmt(g.z, 1)})  rot(${fmt(rr.alpha, 1)}, ${fmt(rr.beta, 1)}, ${fmt(rr.gamma, 1)})  ${M.events} ev`;
-    }
     // shake: jerk magnitude of the gravity vector
     if (M.prevG) {
       const d = Math.hypot(g.x - M.prevG.x, g.y - M.prevG.y, g.z - M.prevG.z);
